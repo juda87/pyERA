@@ -8,6 +8,6 @@ Este proyecto es desarrollado en el marco de la Evaluación Regional del Agua qu
 Autores
 ---
 
-*Juan David Rondón Díaz
+Juan David Rondón Díaz
 
-*Julio Cesar Salazar Neira
+Julio Cesar Salazar Neira
