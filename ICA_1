@@ -10,7 +10,7 @@ from numpy import NaN
 
 #  IMPORTA MATRIZ EXCEL
 
-blanco = pd.read_excel ('C:\\Users\\JCSALAZ\\Desktop\\ICA\\JUEGO_PY\\Excel\\bogota2017_1.xls')
+blanco = pd.read_excel ('Aquí iria la dirección del archivo .xls')
 
 # ______________________________________________________
 # ______________________________________________________
