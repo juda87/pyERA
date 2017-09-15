@@ -1,0 +1,299 @@
+
+import pandas as pd 
+import numpy as np
+import math
+import xlwt
+from numpy import NaN
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  IMPORTA MATRIZ EXCEL
+
+blanco = pd.read_excel ('C:\\Users\\JCSALAZ\\Desktop\\ICA\\JUEGO_PY\\Excel\\bogota2017_1.xls')
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  MODULO OXIGENO DISUELTO
+		
+#  Combierte la temperatura  grados kelvin
+blanco['t_k'] = blanco['Temperatura del agua'] + 273.15
+
+#  Calcula la presion atmosferica
+salida_presion = list ()
+for x in blanco['Altitud (msnm):']:
+	z = (math.exp(6.633-0.000122*x))/760
+	salida_presion.append (z)
+
+blanco['p_atm'] = salida_presion
+
+#  Calcula pw
+salida_pw = list()
+for x_pw in blanco ['t_k']:
+	z = math.exp(11.8571-(3840.7/x_pw)-(216961/ x_pw**2))
+	salida_pw.append (z)
+
+blanco['p_w'] = salida_pw
+
+
+#  Calcula teta
+salida_t = list()
+for y in blanco['Temperatura del agua']:
+	z= 0.000975-(1.426*10**-5*y)+(6.436*10**-8*y**2)
+	salida_t.append (z)
+
+blanco['teta'] = salida_t
+
+#  Calcula porcentaje de equilibrio de oxigeno
+salida_equi = list ()
+for x in blanco['t_k']:
+	z = math.exp((-139.3441+(1.575701*10**5/x)-(6.642308*10**7/x**2)+(1.2438*10**10/x**3)-(8.621949*10**11/x**4)))
+	salida_equi.append (z)
+
+blanco ['equilibrio'] = salida_equi
+
+#  Calcula oxigeno de saturacion
+blanco['oxi_saturacion'] = blanco['equilibrio']*blanco['p_atm']*(((1-blanco['p_w']/blanco['p_atm'])*(1-blanco['teta']*blanco['p_atm']))/((1-blanco['p_w'])*(1-blanco['teta'])))
+
+#  Calcula de PORCENTAJE DE SATURACION DE OXIGENO DISUELTO
+
+blanco['oxigeno_final'] = blanco['Oxigeno Disuelto *'].fillna(blanco['Oxigeno Disuelto en campo*'])
+blanco['pso'] = (blanco['oxigeno_final']*100)/blanco['oxi_saturacion']
+
+
+#  Calcula subindice oxigeno disuelto
+
+salida_sub_oxigeno = list()
+for pso in blanco['pso']:
+	if pso <= 100:
+		z = 1-(1-0.01*pso)
+		salida_sub_oxigeno.append (z)
+	else :
+		z = 1-(0.01*pso-1)
+		salida_sub_oxigeno.append (z)
+	
+blanco ['sub_oxigeno'] = salida_sub_oxigeno
+
+# print (blanco['sub_oxigeno'])
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  MODULO SOLIDOS SUSPENDIDOS
+
+salida_sub_solidos = list ()
+for solidos in blanco ['Sólidos Suspendidos *']:
+	if solidos <= 4.5:
+		z = 1
+		salida_sub_solidos.append (z)
+	elif solidos > 4.5 and solidos < 320:
+		z = 1-(-0.02+(0.003*solidos))
+		salida_sub_solidos.append (z)
+	else:
+		z = 0
+		salida_sub_solidos.append (z)
+
+blanco ['sub_solidos'] = salida_sub_solidos
+
+# print (blanco ['sub_solidos'])
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  MODULO CONDUCTIVIDAD ELECTRICA
+
+blanco ['conductividad_final'] = blanco ['Conductividad *'].fillna (blanco['Conductividad de campo*'])
+
+#  Calcula logaritmo de conductividad
+salida_log = list()
+for dato in blanco['conductividad_final']:
+	z = -3.26 + (1.34 * math.log10 (dato))
+	salida_log.append(z)
+
+blanco ['logaritmo_conductividad'] = salida_log
+
+#  Modifica logarimos negativos 
+
+log_conducti_modificado = 1 - (10**blanco['logaritmo_conductividad'])
+
+#  Calcula el Subindice de conductividad electrica
+
+salida_conductividad = list ()
+for conductividad in log_conducti_modificado:
+	if conductividad > 0:
+		z = conductividad
+		salida_conductividad.append(z)
+	else:
+		z = 0
+		salida_conductividad.append(z)
+
+blanco ['sub_conductividad'] = salida_conductividad
+
+# print (blanco ['sub_conductividad'] )
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  MODULO DQO
+
+blanco['dqo_final'] = blanco['DQO *'].fillna(blanco['DQO *.1'])
+
+salida_dqo = list ()
+for dqo in blanco['dqo_final']:
+	if dqo <= 20:
+		z = 0.91
+		salida_dqo.append (z)
+	elif dqo > 20 and dqo <= 25:
+		z = 0.71
+		salida_dqo.append (z)
+	elif dqo > 25 and dqo <=40:
+		z = 0.51
+		salida_dqo.append(z)
+	elif dqo > 40 and dqo <=80:
+		z = 0.26
+		salida_dqo.append(z)
+	else:
+		z = 0.125
+		salida_dqo.append(z)
+
+blanco ['sub_dqo'] = salida_dqo
+
+# print (blanco['sub_dqo'])
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  MODULO NUTRIENTES (N/P)
+
+#  Calcula relacion Nitrogeno / Fosforo
+
+blanco ['relacion_nutrientes'] = blanco['N- Total Kjeldahl*'] / blanco ['Fósforo Total*']
+
+#  Calcula subindice nutrientes
+
+salida_nutri = list ()
+for relacion in blanco['relacion_nutrientes']:
+	if relacion > 5 and relacion <= 10:
+		z = 0.35
+		salida_nutri.append (z)
+	elif relacion > 10 and relacion < 15:
+		z = 0.6
+		salida_nutri.append (z)
+	elif relacion >= 15 and relacion <= 20:
+		z = 0.8
+		salida_nutri.append (z)
+	else: 
+		z = 0.15
+		salida_nutri.append (z)
+
+blanco ['sub_nutrientes'] = salida_nutri
+
+# print (blanco ['sub_nutrientes'])
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  MODULO pH
+
+blanco ['ph_final'] = blanco ['pH *'].fillna (blanco['pH en campo*'])
+
+#  Calcula subindice pH
+
+salida_ph = list ()
+for ph in blanco['ph_final']:
+	if ph < 4:
+		z = 0.1
+		salida_ph.append(z)
+	elif ph >= 4 and ph <= 7:
+		z = 0.02628419*math.exp(ph*0.520025)
+		salida_ph.append(z)
+	elif ph > 7 and ph <= 8:
+		z = 1
+		salida_ph.append(z)
+	elif ph > 8  and ph <= 11:
+		z = 1*math.exp((ph-8)*-0.5187742)
+		salida_ph.append(z)
+	else:
+		z = 0.1
+		salida_ph.append(z)
+
+blanco ['sub_ph'] = salida_ph
+
+# print (blanco ['sub_ph'])
+
+# ______________________________________________________
+# ______________________________________________________
+
+#  MODULO E. coli
+
+salida_ecoli = list()
+for ecoli in blanco['E. coli *']:
+	if ecoli < 50:
+		z = 0.98
+		salida_ecoli.append(z)
+	elif ecoli >= 50 and ecoli < 1600:
+		z = 0.98 * math.exp ((ecoli-50)*(-0.0009917754))
+		salida_ecoli.append(z)
+	else:
+		z = 0.1
+		salida_ecoli.append(z)
+
+blanco['sub_ecoli'] = salida_ecoli
+
+# print (blanco['sub_ecoli'])
+
+# ______________________________________________________
+# ______________________________________________________
+# ______________________________________________________
+
+
+#  CALCULA INDICE DE CALIDA DEL AGUA 7 VARIABLES
+
+blanco['ica7'] = ((blanco ['sub_oxigeno']*0.16)+(blanco ['sub_solidos']*0.14)+(blanco ['sub_conductividad']*0.14)+
+					(blanco ['sub_dqo']*0.14)+(blanco ['sub_nutrientes']*0.14)+(blanco ['sub_ph']*0.14)+(blanco['sub_ecoli']*0.14))
+
+salida_categoria = list ()
+for ica in blanco['ica7']:
+	if ica  >= 0 and ica <= 0.25:
+		z = 'MUY MALA'
+		salida_categoria.append (z)
+	elif ica > 0.25 and ica <= 0.50:
+		Z = 'MALA'
+		salida_categoria.append (z)
+	elif ica > 0.50 and ica <= 0.70:
+		z = 'REGULAR'
+		salida_categoria.append (z)
+	elif ica > 0.70 and ica <= 0.90:
+		z = 'ACEPTABLE'
+		salida_categoria.append (z)
+	elif ica > 0.90 and ica <= 1.00:
+		z = 'BUENA'
+		salida_categoria.append (z)
+	elif ica < 0  and  ica > 1:					
+		z = 'ERROR el resultado del ICA no puede ser mayor a 1 o menor a 0'
+		salida_categoria.append (z)
+	else:
+		z = 'Falta informacion / verificar celda grises'
+		salida_categoria.append (z)
+
+blanco['categoria'] = salida_categoria
+
+# print (blanco['categoria'])
+
+# print (blanco['ica7'])
+
+
+
+matriz_1 = blanco.filter (['No.', 'Nombre', 'Ubicación', 'Num lab', 'X', 'Y', 'Altitud (msnm):', 'Fecha muestreo', 't_k', 'p_atm', 'p_w', 'teta', 
+						'equilibrio', 'oxi_saturacion', 'oxigeno_final', 'pso', 'sub_oxigeno', 'Sólidos Suspendidos *', 'sub_solidos', 
+						'logaritmo_conductividad', 'conductividad_final', 'sub_conductividad', 'dqo_final', 'sub_dqo', 'relacion_nutrientes', 
+						'N- Total Kjeldahl*', 'Fósforo Total*','sub_nutrientes', 'ph_final', 'sub_ph', 'E. coli *', 'sub_ecoli', 'ica7', 'categoria'])
+
+
+
+
+
+matriz_1.to_excel ('C:\\Users\\JCSALAZ\\Desktop\\ICA\\JUEGO_PY\\Bases\\Bogota.xls' )
+
+# print (blanco.columns.values.tolist())
